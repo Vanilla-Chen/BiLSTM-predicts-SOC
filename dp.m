@@ -1,21 +1,21 @@
 %% 清除指令
-clear 
-
-
-%% Load the dataset 加载数据集
-addpath('DATA');
-% 训练集
-[TrainData]=readtable('FUDS_45_train.xlsx','Sheet','Sheet1');
-V_Train   = table2array(TrainData(1:3:71391,3))';  %max 71391
-A_Train   = table2array(TrainData(1:3:71391,4))';
-SOC_Train = table2array(TrainData(1:3:71391,6))';
-XTrain = V_Train;
-YTrain = (SOC_Train);
-
-[inputnTrain ,  inputpsTrain ] = mapminmax(XTrain);
-[outputnTrain,  outputpsTrain] = mapminmax(YTrain);
-XTrain= mapminmax('apply',XTrain,inputpsTrain);   %测试输入数据归一化
-YTrain= mapminmax('apply',YTrain,outputpsTrain);  %测试输入数据归一化
+% clear 
+% 
+% 
+% % Load the dataset 加载数据集
+% addpath('DATA');
+% % 训练集
+% [TrainData]=readtable('FUDS_45_train.xlsx','Sheet','Sheet1');
+% V_Train   = table2array(TrainData(1:1:71391,3))';  %max 71391
+% A_Train   = table2array(TrainData(1:1:71391,4))';
+% SOC_Train = table2array(TrainData(1:1:71391,6))';
+% XTrain = [V_Train;A_Train];% XTrain = V_Train;
+% YTrain = (SOC_Train);
+% 
+% [inputnTrain ,  inputpsTrain ] = mapminmax(XTrain);
+% [outputnTrain,  outputpsTrain] = mapminmax(YTrain);
+% XTrain= mapminmax('apply',XTrain,inputpsTrain);   %测试输入数据归一化
+% YTrain= mapminmax('apply',YTrain,outputpsTrain);  %测试输入数据归一化
 
 % 测试集
 [TestData]=readtable('45C_FUDS_80test.xlsx','Sheet','Sheet1');
@@ -23,7 +23,7 @@ V_Test   = table2array(TestData(1:1:13519,3))';  %max 13519
 A_Test   = table2array(TestData(1:1:13519,4))';
 SOC_Test = table2array(TestData(1:1:13519,6))';
 
-XTest = V_Test;
+XTest = [V_Test;A_Test];% XTest = V_Test;
 YTest = SOC_Test;
 [inputnTest ,inputpsTest ] = mapminmax(XTest);
 [outputnTest,outputpsTest] = mapminmax(YTest);
@@ -36,60 +36,64 @@ XTest= mapminmax('apply',XTest,inputpsTest);        %测试输入数据归一化
 
 % BPoutput= mapminmax('reverse',YTrain,outputps);   %网络预测数据反归一化
 
-subplot(211);
-plot(XTrain);
-% plot(A);
-subplot(212);
-plot(SOC_Train);
-
-%% Deep learning 深度学习框架
+% subplot(211);
+% plot(V_Train);
+% hold on;
+% plot(A_Train);
+% % plot(A);
+% subplot(212);
+% plot(SOC_Train);
 % 
-% LSTM网络架构
-% 这是Bi-LSTM网络的参数，从上往下依次构建网络的输入到输出层
-layers = [ ...
-  sequenceInputLayer(1)                % 输入数据为1维数据
-  convolution1dLayer(256,1,'Padding','same','Stride',1)
-  fullyConnectedLayer(512)                  %全连接层
-  bilstmLayer(512)                     % 
-  dropoutLayer(0.2)%丢弃层概率 
-  reluLayer('name','relu_0')                  %激励函数 RELU 
-  fullyConnectedLayer(256)                  %全连接层
-  reluLayer('name','relu_1')                  %激励函数 RELU 
-  fullyConnectedLayer(128)                  %全连接层
-  reluLayer('name','relu_2')                  %激励函数 RELU 
-  fullyConnectedLayer(16)                   %全连接层
-  reluLayer('name','relu_3')                  %激励函数 RELU 
-  fullyConnectedLayer(1)                    %全连接层
-  regressionLayer                           %回归层
-  ]
+% %% Deep learning 深度学习框架
+% % 
+% % LSTM网络架构
+% % 这是Bi-LSTM网络的参数，从上往下依次构建网络的输入到输出层
+% layers = [ ...
+%   sequenceInputLayer(2)                % 输入数据为2维数据
+%   convolution1dLayer(128,2048,'Padding','same','Stride',1)
+%   reluLayer('name','relu_0')               %激励函数 RELU 
+%   % dropoutLayer(0.2)                         %丢弃层概率 
+%   % fullyConnectedLayer(512)                  %全连接层
+%   bilstmLayer(1024)                          % 
+%   dropoutLayer(0.2)                         %丢弃层概率 
+%   reluLayer('name','relu_1')                %激励函数 RELU 
+%   fullyConnectedLayer(256)                  %全连接层
+%   reluLayer('name','relu_3')                %激励函数 RELU 
+%   fullyConnectedLayer(128)                  %全连接层
+%   reluLayer('name','relu_4')                %激励函数 RELU 
+%   fullyConnectedLayer(16)                   %全连接层
+%   reluLayer('name','relu_5')                %激励函数 RELU 
+%   fullyConnectedLayer(1)                    %全连接层
+%   regressionLayer                           %回归层
+%   ]
+% 
+% 
+% % Bi-LSTM超参数设置
+% options = trainingOptions('adam', ...   % ADAM求解器
+%     'MaxEpochs',35, ...                  % 最大训练epoch次数
+%     'MiniBatchSize', 256, ...           % 小批量尺寸，不宜太大，否则易出现CUDA错误
+%     'InitialLearnRate', 0.001, ...       % 学习率
+%     'SequenceLength', 4000, ...          % 序列长度（将信号分解成更小的片段）
+%     'GradientThreshold', 1, ...         % 梯度阈值，防止梯度爆炸
+%     'ExecutionEnvironment',"auto",...   % 自动选择执行的硬件环境，如果有GPU，首选GPU，否则选用CPU训练
+%     'LearnRateSchedule','piecewise', ...
+%     'LearnRateDropPeriod',10, ...      %125次后 ，学习率下降 
+%     'LearnRateDropFactor',0.2, ...      %下降因子 0.2
+%     'plots','training-progress', ...    % 绘制训练过程
+%     'Verbose',false);                   % 在命令行窗口展示训练过程（true:是，false:否
+% 
+% 
+%     % 'ValidationData',{XTrain,YTrain}, ...
+%     % 'ValidationFrequency',2, ...        %每1步验证一次 
+% % 训练LSTM网络
+% % 训练设置好的Bi-LSTM网络，并把训练好的模型存贮到对象net
+% net = trainNetwork(XTrain,YTrain,layers,options);
 
-
-% Bi-LSTM超参数设置
-options = trainingOptions('adam', ...   % ADAM求解器
-    'MaxEpochs',30, ...                  % 最大训练epoch次数
-    'MiniBatchSize', 256, ...           % 小批量尺寸，不宜太大，否则易出现CUDA错误
-    'InitialLearnRate', 0.01, ...       % 学习率
-    'SequenceLength', 1000, ...          % 序列长度（将信号分解成更小的片段）
-    'GradientThreshold', 1, ...         % 梯度阈值，防止梯度爆炸
-    'ExecutionEnvironment',"auto",...   % 自动选择执行的硬件环境，如果有GPU，首选GPU，否则选用CPU训练
-    'LearnRateSchedule','piecewise', ...
-    'LearnRateDropPeriod',10, ...      %125次后 ，学习率下降 
-    'LearnRateDropFactor',0.2, ...      %下降因子 0.2
-    'plots','training-progress', ...    % 绘制训练过程
-    'Verbose',false);                   % 在命令行窗口展示训练过程（true:是，false:否
-
-
-    % 'ValidationData',{XTrain,YTrain}, ...
-    % 'ValidationFrequency',2, ...        %每1步验证一次 
-% 训练LSTM网络
-% 训练设置好的Bi-LSTM网络，并把训练好的模型存贮到对象net
-net = trainNetwork(XTrain,YTrain,layers,options);
-
+%% 性能评估
 % 步骤6：可视化训练和测试准确度
 % 对训练数据进行预测
 predicted_values = predict(net, XTest);     %网络预测
-predicted_values= mapminmax('reverse',predicted_values,outputpsTest);   %网络预测数据反归一化
-
+predicted_values = mapminmax('reverse',predicted_values,outputpsTest);   %网络预测数据反归一化
 
 % 网络可视化
 figure
@@ -137,6 +141,25 @@ error = predicted_values - true_values; % 计算预测值与真实值之间的�
 mse = mean(error .^ 2) % 计算均方误差（MSE）
 mae = mean(abs(error)) % 计算平均绝对误差（MAE）
 R = corrcoef(predicted_values, true_values) % 计算预测值和真实值之间的相关系数
+
+y_true = YTest;
+y_pred = predicted_values;
+% 计算观测值的均值
+y_mean = mean(y_true);
+% 计算总平方和
+SS_tot = sum((y_true - y_mean).^2);
+% 计算残差
+residuals = y_true - y_pred;
+% 计算残差平方和
+SS_res = sum(residuals.^2);
+% 计算 R 方值
+R_squared = 1 - (SS_res / SS_tot);
+disp(['R squared value: ', num2str(R_squared)]);
+
+figure
+plot((y_pred-y_true)./y_true*100);
+ylabel(['SOC Error(%)']);
+
 
 %% 数据分析
 
