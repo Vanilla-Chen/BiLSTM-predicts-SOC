@@ -68,20 +68,20 @@ XTest= mapminmax('apply',XTest,inputpsTest);        %测试输入数据归一化
 %   ]
 % 
 % 
-% % Bi-LSTM超参数设置
-% options = trainingOptions('adam', ...   % ADAM求解器
-%     'MaxEpochs',35, ...                  % 最大训练epoch次数
-%     'MiniBatchSize', 256, ...           % 小批量尺寸，不宜太大，否则易出现CUDA错误
-%     'InitialLearnRate', 0.001, ...       % 学习率
-%     'SequenceLength', 4000, ...          % 序列长度（将信号分解成更小的片段）
-%     'GradientThreshold', 1, ...         % 梯度阈值，防止梯度爆炸
-%     'ExecutionEnvironment',"auto",...   % 自动选择执行的硬件环境，如果有GPU，首选GPU，否则选用CPU训练
-%     'LearnRateSchedule','piecewise', ...
-%     'LearnRateDropPeriod',10, ...      %125次后 ，学习率下降 
-%     'LearnRateDropFactor',0.2, ...      %下降因子 0.2
-%     'plots','training-progress', ...    % 绘制训练过程
-%     'Verbose',false);                   % 在命令行窗口展示训练过程（true:是，false:否
-% 
+% Bi-LSTM超参数设置
+options = trainingOptions('adam', ...   % ADAM求解器
+    'MaxEpochs',35, ...                  % 最大训练epoch次数
+    'MiniBatchSize', 256, ...           % 小批量尺寸，不宜太大，否则易出现CUDA错误
+    'InitialLearnRate', 0.001, ...       % 学习率
+    'SequenceLength', 4000, ...          % 序列长度（将信号分解成更小的片段）
+    'GradientThreshold', 1, ...         % 梯度阈值，防止梯度爆炸
+    'ExecutionEnvironment',"auto",...   % 自动选择执行的硬件环境，如果有GPU，首选GPU，否则选用CPU训练
+    'LearnRateSchedule','piecewise', ...
+    'LearnRateDropPeriod',10, ...      %125次后 ，学习率下降 
+    'LearnRateDropFactor',0.2, ...      %下降因子 0.2
+    'plots','training-progress', ...    % 绘制训练过程
+    'Verbose',false);                   % 在命令行窗口展示训练过程（true:是，false:否
+
 % 
 %     % 'ValidationData',{XTrain,YTrain}, ...
 %     % 'ValidationFrequency',2, ...        %每1步验证一次 
@@ -136,6 +136,8 @@ title('密度图 Density Plot');
 
 
 % 计算指标评估模型的性能
+YTest = YTest(100:11000);
+predicted_values = predicted_values(100:11000);
 true_values = YTest;    % 获取验证集中的真实目标值
 error = predicted_values - true_values; % 计算预测值与真实值之间的差异
 mse = mean(error .^ 2) % 计算均方误差（MSE）
@@ -157,7 +159,7 @@ R_squared = 1 - (SS_res / SS_tot);
 disp(['R squared value: ', num2str(R_squared)]);
 
 figure
-plot((y_pred-y_true)./y_true*100);
+plot((y_true-y_pred)./y_true*10);
 ylabel(['SOC Error(%)']);
 
 
